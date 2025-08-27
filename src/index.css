@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Custom Properties for Dynamic Theming */
+:root {
+  --font-family: 'Inter', sans-serif;
+  --primary-color: #8B5CF6;
+  --font-size-base: 16px;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+}
+
+/* Font Size Classes */
+.font-size-small { font-size: 14px; }
+.font-size-medium { font-size: 16px; }
+.font-size-large { font-size: 18px; }
+.font-size-extra-large { font-size: 20px; }
+
+/* Dark Mode Transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+/* Ensure proper scrolling */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Fix scrolling in modals */
+.modal-scroll {
+  max-height: 90vh;
+  overflow-y: auto;
+}
