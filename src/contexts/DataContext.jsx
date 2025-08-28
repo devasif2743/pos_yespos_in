@@ -1,12 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import api from "./authApi";
 
 const DataContext = createContext();
 
 export const useData = () => {
   const context = useContext(DataContext);
-  if (!context) {
-    throw new Error('useData must be used within a DataProvider');
-  }
+  if (!context) throw new Error("useData must be used within a DataProvider");
   return context;
 };
 
@@ -14,407 +13,295 @@ export const DataProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [combos, setCombos] = useState([]);
-  const [settings, setSettings] = useState(null);
   const [brands, setBrands] = useState([]);
+  const [combos, setCombos] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Initialize default data
-  const defaultCategories = [
-    { id: '1', name: 'Electronics', description: 'Electronic items' },
-    { id: '2', name: 'Clothing', description: 'Apparel and accessories' },
-    { id: '3', name: 'Food & Beverages', description: 'Food and drink items' }
-  ];
+  const didInit = useRef(false);
 
-  const defaultProducts = [
-    {
-      id: '1',
-      name: 'Samsung Galaxy S21',
-      brand: 'Samsung',
-      imageUrl: 'https://images.pexels.com/photos/5081398/pexels-photo-5081398.jpeg?auto=compress&cs=tinysrgb&w=300',
-      categoryId: '1',
-      stock: 10,
-      price: 799.99,
-      offerPrice: 699.99,
-      finalPrice: 699.99,
-      discountPercent: 12.5,
-      branchIds: ['1'],
-      barcode: '1234567890123'
-    },
-    {
-      id: '2',
-      name: 'Nike Air Max',
-      brand: 'Nike',
-      imageUrl: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=300',
-      categoryId: '2',
-      stock: 15,
-      price: 120.00,
-      offerPrice: null,
-      finalPrice: 120.00,
-      discountPercent: 0,
-      branchIds: ['1'],
-      barcode: '1234567890124'
-    },
-    {
-      id: '3',
-      name: 'Coca Cola 500ml',
-      brand: 'Coca-Cola',
-      imageUrl: 'https://images.pexels.com/photos/50593/coca-cola-cold-drink-soft-drink-coke-50593.jpeg?auto=compress&cs=tinysrgb&w=300',
-      categoryId: '3',
-      stock: 50,
-      price: 2.50,
-      offerPrice: 2.00,
-      finalPrice: 2.00,
-      discountPercent: 20,
-      branchIds: ['1'],
-      barcode: '1234567890125'
+  // ================= BRANDS =================
+  const fetchBrands = async () => {
+    try {
+      const res = await api.get("/admin/list-brand");
+      if (res.data.status) setBrands(res.data.data);
+    } catch (err) {
+      console.error("Error fetching brands:", err.response?.data || err);
     }
-  ];
+  };
 
-  const defaultBrands = [
-    { 
-      id: '1', 
-      name: 'Samsung', 
-      description: 'South Korean multinational electronics corporation',
-      logoUrl: 'https://images.pexels.com/photos/404280/pexels-photo-404280.jpeg?auto=compress&cs=tinysrgb&w=100'
-    },
-    { 
-      id: '2', 
-      name: 'Nike', 
-      description: 'American multinational corporation engaged in the design and manufacturing of footwear and apparel',
-      logoUrl: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=100'
-    },
-    { 
-      id: '3', 
-      name: 'Coca-Cola', 
-      description: 'American multinational beverage corporation',
-      logoUrl: 'https://images.pexels.com/photos/50593/coca-cola-cold-drink-soft-drink-coke-50593.jpeg?auto=compress&cs=tinysrgb&w=100'
+  const addBrand = async (formData, isFile = false) => {
+    try {
+      const config = isFile ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+      const res = await api.post("/admin/add-brand", formData, config);
+      if (res.data.status) setBrands((prev) => [...prev, res.data.data]);
+    } catch (err) {
+      console.error("Error adding brand:", err.response?.data || err);
     }
-  ];
+  };
 
-  const defaultBranches = [
-    {
-      id: '1',
-      name: 'Main Branch',
-      address: '123 Main Street, City',
-      phone: '+1234567890',
-      email: 'main@pos.com',
-      manager: 'Branch Manager'
+  const updateBrand = async (id, formData, isFile = false) => {
+    try {
+      const config = isFile ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+      const res = await api.post(`/admin/update-brand/${id}`, formData, config);
+      if (res.data.status) {
+        setBrands((prev) => prev.map((b) => (b.id === id ? res.data.data : b)));
+      }
+    } catch (err) {
+      console.error("Error updating brand:", err.response?.data || err);
     }
-  ];
+  };
 
-  useEffect(() => {
-    // Initialize data if not exists
-    if (!localStorage.getItem('pos_categories')) {
-      localStorage.setItem('pos_categories', JSON.stringify(defaultCategories));
+  const deleteBrand = async (id) => {
+    try {
+      await api.delete(`/admin/delete-brand/${id}`);
+      setBrands((prev) => prev.filter((b) => b.id !== id));
+    } catch (err) {
+      console.error("Error deleting brand:", err.response?.data || err);
     }
-    if (!localStorage.getItem('pos_products')) {
-      localStorage.setItem('pos_products', JSON.stringify(defaultProducts));
+  };
+
+  // ================= CATEGORIES =================
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get("/admin/list-category");
+      if (res.data.status) setCategories(res.data.data);
+    } catch (err) {
+      console.error("Error fetching categories:", err.response?.data || err);
     }
-    if (!localStorage.getItem('pos_branches')) {
-      localStorage.setItem('pos_branches', JSON.stringify(defaultBranches));
+  };
+
+  const addCategory = async (data) => {
+    try {
+      const res = await api.post("/admin/add-category", data);
+      if (res.data.status) setCategories((prev) => [...prev, res.data.data]);
+    } catch (err) {
+      console.error("Error adding category:", err.response?.data || err);
     }
-    if (!localStorage.getItem('pos_transactions')) {
-      localStorage.setItem('pos_transactions', JSON.stringify([]));
+  };
+
+  const updateCategory = async (id, data) => {
+    try {
+      const res = await api.post(`/admin/update-category/${id}`, data);
+      if (res.data.status) {
+        setCategories((prev) => prev.map((c) => (c.id === id ? res.data.data : c)));
+      }
+    } catch (err) {
+      console.error("Error updating category:", err.response?.data || err);
     }
-    if (!localStorage.getItem('pos_customers')) {
-      localStorage.setItem('pos_customers', JSON.stringify([]));
+  };
+
+  const deleteCategory = async (id) => {
+    try {
+      await api.delete(`/admin/delete-category/${id}`);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error("Error deleting category:", err.response?.data || err);
     }
-    if (!localStorage.getItem('pos_combos')) {
-      localStorage.setItem('pos_combos', JSON.stringify([]));
+  };
+
+  // ================= BRANCHES =================
+  const fetchBranches = async () => {
+    try {
+      const res = await api.get("/admin/list-branch");
+      if (res.data.status) setBranches(res.data.data);
+    } catch (err) {
+      console.error("Error fetching branches:", err.response?.data || err);
     }
-    if (!localStorage.getItem('pos_brands')) {
-      localStorage.setItem('pos_brands', JSON.stringify(defaultBrands));
+  };
+
+  const addBranch = async (data) => {
+    try {
+      const res = await api.post("/admin/add-branch", data);
+      if (res.data.status) setBranches((prev) => [...prev, res.data.data]);
+    } catch (err) {
+      console.error("Error adding branch:", err.response?.data || err);
     }
-    if (!localStorage.getItem('pos_settings')) {
-      const defaultSettings = {
-        companyName: 'POS System',
-        logoUrl: '',
-        tagline: 'Modern Point of Sale Solution',
-        phone: '+1 (555) 123-4567',
-        email: 'admin@pos.com',
-        website: 'https://pos-system.com',
-        address: '123 Business Street, City, State 12345',
-        businessType: 'Retail Store',
-        currency: 'USD',
-        taxRate: 0,
-        receiptFooter: 'Thank you for your business!',
-        
-        // Appearance Settings
-        theme: 'light',
-        primaryColor: '#8B5CF6',
-        fontFamily: 'Inter',
-        fontSize: 'medium',
-        
-        // System Settings
-        timezone: 'America/New_York',
-        dateFormat: 'MM/DD/YYYY',
-        
-        // Integration Settings
-        stripePublishableKey: '',
-        stripeSecretKey: '',
-        paypalClientId: '',
-        emailProvider: 'smtp',
-        smtpHost: '',
-        smtpPort: 587,
-        smtpUser: '',
-        smtpPass: '',
-        
-        // Advanced Settings
-        enableNotifications: true,
-        enableInventoryAlerts: true,
-        autoBackup: true,
-        sessionTimeout: 30,
-        enableTwoFactor: false,
-        allowGuestCheckout: true,
-        enableLoyaltyProgram: false
-      };
-      localStorage.setItem('pos_settings', JSON.stringify(defaultSettings));
+  };
+
+  const updateBranch = async (id, data) => {
+    try {
+      const res = await api.post(`/admin/update-branch/${id}`, data);
+      if (res.data.status) {
+        setBranches((prev) => prev.map((b) => (b.id === id ? res.data.data : b)));
+      }
+    } catch (err) {
+      console.error("Error updating branch:", err.response?.data || err);
     }
-
-    // Load data
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    setCategories(JSON.parse(localStorage.getItem('pos_categories') || '[]'));
-    setProducts(JSON.parse(localStorage.getItem('pos_products') || '[]'));
-    setBranches(JSON.parse(localStorage.getItem('pos_branches') || '[]'));
-    setTransactions(JSON.parse(localStorage.getItem('pos_transactions') || '[]'));
-    setCustomers(JSON.parse(localStorage.getItem('pos_customers') || '[]'));
-    setCombos(JSON.parse(localStorage.getItem('pos_combos') || '[]'));
-    setSettings(JSON.parse(localStorage.getItem('pos_settings') || '{}'));
-    setBrands(JSON.parse(localStorage.getItem('pos_brands') || '[]'));
   };
 
-  const saveToStorage = (key, data) => {
-    localStorage.setItem(key, JSON.stringify(data));
-  };
-
-  // Category operations
-  const addCategory = (category) => {
-    const newCategory = { ...category, id: Date.now().toString() };
-    const updated = [...categories, newCategory];
-    setCategories(updated);
-    saveToStorage('pos_categories', updated);
-    return newCategory;
-  };
-
-  const updateCategory = (id, updates) => {
-    const updated = categories.map(cat => 
-      cat.id === id ? { ...cat, ...updates } : cat
-    );
-    setCategories(updated);
-    saveToStorage('pos_categories', updated);
-  };
-
-  const deleteCategory = (id) => {
-    const updated = categories.filter(cat => cat.id !== id);
-    setCategories(updated);
-    saveToStorage('pos_categories', updated);
-  };
-
-  // Product operations
-  const addProduct = (product) => {
-    const finalPrice = product.offerPrice || product.price;
-    const discountPercent = product.offerPrice 
-      ? Math.round(((product.price - product.offerPrice) / product.price) * 100 * 100) / 100
-      : 0;
-
-    const newProduct = { 
-      ...product, 
-      id: Date.now().toString(),
-      finalPrice,
-      discountPercent,
-      barcode: product.barcode || Date.now().toString()
-    };
-    const updated = [...products, newProduct];
-    setProducts(updated);
-    saveToStorage('pos_products', updated);
-    return newProduct;
-  };
-
-  const updateProduct = (id, updates) => {
-    const finalPrice = updates.offerPrice || updates.price;
-    const discountPercent = updates.offerPrice 
-      ? Math.round(((updates.price - updates.offerPrice) / updates.price) * 100 * 100) / 100
-      : 0;
-
-    const updated = products.map(prod => 
-      prod.id === id 
-        ? { ...prod, ...updates, finalPrice, discountPercent } 
-        : prod
-    );
-    setProducts(updated);
-    saveToStorage('pos_products', updated);
-  };
-
-  const deleteProduct = (id) => {
-    const updated = products.filter(prod => prod.id !== id);
-    setProducts(updated);
-    saveToStorage('pos_products', updated);
-  };
-
-  // Branch operations
-  const addBranch = (branch) => {
-    const newBranch = { 
-      ...branch, 
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    const updated = [...branches, newBranch];
-    setBranches(updated);
-    saveToStorage('pos_branches', updated);
-    return newBranch;
-  };
-
-  const updateBranch = (id, updates) => {
-    const updated = branches.map(branch => 
-      branch.id === id ? { ...branch, ...updates } : branch
-    );
-    setBranches(updated);
-    saveToStorage('pos_branches', updated);
-  };
-
-  const deleteBranch = (id) => {
-    const updated = branches.filter(branch => branch.id !== id);
-    setBranches(updated);
-    saveToStorage('pos_branches', updated);
-  };
-
-  // Transaction operations
-  const addTransaction = (transaction) => {
-    const newTransaction = { 
-      ...transaction, 
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString()
-    };
-    const updated = [...transactions, newTransaction];
-    setTransactions(updated);
-    saveToStorage('pos_transactions', updated);
-    return newTransaction;
-  };
-
-  // Customer operations
-  const addCustomer = (customer) => {
-    const newCustomer = { ...customer, id: Date.now().toString() };
-    const updated = [...customers, newCustomer];
-    setCustomers(updated);
-    saveToStorage('pos_customers', updated);
-    return newCustomer;
-  };
-
-  // Combo operations
-  const addCombo = (combo) => {
-    const newCombo = { 
-      ...combo, 
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    const updated = [...combos, newCombo];
-    setCombos(updated);
-    saveToStorage('pos_combos', updated);
-    return newCombo;
-  };
-
-  const updateCombo = (id, updates) => {
-    const updated = combos.map(combo => 
-      combo.id === id ? { ...combo, ...updates } : combo
-    );
-    setCombos(updated);
-    saveToStorage('pos_combos', updated);
-  };
-
-  const deleteCombo = (id) => {
-    const updated = combos.filter(combo => combo.id !== id);
-    setCombos(updated);
-    saveToStorage('pos_combos', updated);
-  };
-
-  // Brand operations
-  const addBrand = (brand) => {
-    const newBrand = { 
-      ...brand, 
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    const updated = [...brands, newBrand];
-    setBrands(updated);
-    saveToStorage('pos_brands', updated);
-    return newBrand;
-  };
-
-  const updateBrand = (id, updates) => {
-    const updated = brands.map(brand => 
-      brand.id === id ? { ...brand, ...updates } : brand
-    );
-    setBrands(updated);
-    saveToStorage('pos_brands', updated);
-  };
-
-  const deleteBrand = (id) => {
-    const updated = brands.filter(brand => brand.id !== id);
-    setBrands(updated);
-    saveToStorage('pos_brands', updated);
-  };
-
-  // Settings operations
-  const updateSettings = (newSettings) => {
-    setSettings(newSettings);
-    saveToStorage('pos_settings', newSettings);
-    
-    // Apply settings immediately
-    if (newSettings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+  const deleteBranch = async (id) => {
+    try {
+      await api.delete(`/admin/delete-branch/${id}`);
+      setBranches((prev) => prev.filter((b) => b.id !== id));
+    } catch (err) {
+      console.error("Error deleting branch:", err.response?.data || err);
     }
-    
-    document.documentElement.style.setProperty('--font-family', newSettings.fontFamily);
-    document.documentElement.style.setProperty('--primary-color', newSettings.primaryColor);
-    
-    const fontSizeMap = {
-      'small': '14px',
-      'medium': '16px', 
-      'large': '18px',
-      'extra-large': '20px'
-    };
-    document.documentElement.style.setProperty('--font-size-base', fontSizeMap[newSettings.fontSize]);
   };
 
-  const value = {
-    categories,
-    products,
-    branches,
-    transactions,
-    customers,
-    combos,
-    settings,
-    brands,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    addBranch,
-    updateBranch,
-    deleteBranch,
-    addTransaction,
-    addCustomer,
-    addCombo,
-    updateCombo,
-    deleteCombo,
-    addBrand,
-    updateBrand,
-    deleteBrand,
-    updateSettings,
-    loadData
+  // ================= PRODUCTS =================
+  const fetchProducts = async () => {
+    try {
+      const res = await api.get("/admin/list-product");
+      if (res.data.status) {
+        const normalized = res.data.data.map((p) => ({
+          ...p,
+          price: Number(p.price || 0),
+          offer_price: Number(p.offer_price || 0),
+          finalPrice: Number(p.finalPrice || p.offer_price || p.price || 0),
+          stock: Number(p.stock || 0),
+        }));
+        setProducts(normalized);
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err.response?.data || err);
+    }
   };
+
+  const addProduct = async (formData, isFile = false) => {
+    try {
+      const config = isFile ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+      const res = await api.post("/admin/add-product", formData, config);
+      if (res.data.status) setProducts((prev) => [...prev, res.data.data]);
+    } catch (err) {
+      console.error("Error adding product:", err.response?.data || err);
+    }
+  };
+
+  const updateProduct = async (id, formData, isFile = false) => {
+    try {
+      const config = isFile ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+      const res = await api.post(`/admin/update-product/${id}`, formData, config);
+      if (res.data.status) {
+        setProducts((prev) => prev.map((p) => (p.id === id ? res.data.data : p)));
+      }
+    } catch (err) {
+      console.error("Error updating product:", err.response?.data || err);
+    }
+  };
+
+  const deleteProduct = async (id) => {
+    try {
+      await api.delete(`/admin/delete-product/${id}`);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("Error deleting product:", err.response?.data || err);
+    }
+  };
+
+  // ================= COMBOS =================
+  const fetchCombos = async () => {
+    try {
+      const res = await api.get("/admin/list-combo");
+      if (res.data.status) {
+        setCombos(
+          res.data.data.map((c) => ({
+            ...c,
+            price: Number(c.price || 0),
+            offerPrice: Number(c.offerPrice || 0),
+            finalPrice: Number(c.finalPrice || c.offerPrice || c.price || 0),
+            totalOriginalPrice: Number(c.totalOriginalPrice || 0),
+            stock: Number(c.stock || 0),
+            products: (c.products || []).map((p) => ({
+              ...p,
+              finalPrice: Number(p.finalPrice || p.offer_price || p.price || 0),
+            })),
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Error fetching combos:", err.response?.data || err);
+    }
+  };
+
+  const addCombo = async (data) => {
+    try {
+      const res = await api.post("/admin/add-combo", data);
+      if (res.data.status) setCombos((prev) => [...prev, res.data.data]);
+    } catch (err) {
+      console.error("Error adding combo:", err.response?.data || err);
+    }
+  };
+
+  const updateCombo = async (id, data) => {
+    try {
+      const res = await api.post(`/admin/update-combo/${id}`, data);
+      if (res.data.status) {
+        setCombos((prev) => prev.map((c) => (c.id === id ? res.data.data : c)));
+      }
+    } catch (err) {
+      console.error("Error updating combo:", err.response?.data || err);
+    }
+  };
+
+  const deleteCombo = async (id) => {
+    try {
+      await api.delete(`/admin/delete-combo/${id}`);
+      setCombos((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error("Error deleting combo:", err.response?.data || err);
+    }
+  };
+
+  // ================= INIT FETCH =================
+useEffect(() => {
+  let isMounted = true;
+  (async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchBrands(),
+        fetchCategories(),
+        fetchBranches(),
+        fetchProducts(),
+        fetchCombos(),
+      ]);
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+  })();
+  return () => {
+    isMounted = false;
+  };
+}, []); // empty dependency => only runs once
+
+
 
   return (
-    <DataContext.Provider value={value}>
+    <DataContext.Provider
+      value={{
+        categories,
+        products,
+        branches,
+        brands,
+        combos,
+        loading,
+
+        fetchBrands,
+        addBrand,
+        updateBrand,
+        deleteBrand,
+
+        fetchCategories,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+
+        fetchBranches,
+        addBranch,
+        updateBranch,
+        deleteBranch,
+
+        fetchProducts,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+
+        fetchCombos,
+        addCombo,
+        updateCombo,
+        deleteCombo,
+      }}
+    >
       {children}
     </DataContext.Provider>
   );

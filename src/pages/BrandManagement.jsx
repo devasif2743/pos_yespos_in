@@ -8,45 +8,59 @@ import {
   X,
   Save,
   Search,
-  Upload,
-  Package
+  Upload
 } from 'lucide-react';
 
+
 const BrandManagement = () => {
+ 
+
   const { brands, products, addBrand, updateBrand, deleteBrand } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    logoUrl: ''
+    description: ''
   });
+  const [logoFile, setLogoFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const filteredBrands = brands.filter(brand =>
     brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (brand.description && brand.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (editingBrand) {
-      updateBrand(editingBrand.id, formData);
-    } else {
-      addBrand(formData);
+
+    const data = new FormData();
+    data.append("name", formData.name);
+    data.append("description", formData.description);
+    if (logoFile) {
+      data.append("image", logoFile); // Laravel expects "image"
     }
 
-    handleCloseModal();
+    try {
+      if (editingBrand) {
+        await updateBrand(editingBrand.id, data, true);
+      } else {
+        await addBrand(data, true);
+      }
+      handleCloseModal();
+    } catch (err) {
+      console.error("Error saving brand:", err);
+    }
   };
 
   const handleEdit = (brand) => {
     setEditingBrand(brand);
     setFormData({
       name: brand.name,
-      description: brand.description || '',
-      logoUrl: brand.logoUrl || ''
+      description: brand.description || ''
     });
+    setPreviewUrl(brand.image_url || null);
+    setLogoFile(null);
     setIsModalOpen(true);
   };
 
@@ -66,7 +80,9 @@ const BrandManagement = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingBrand(null);
-    setFormData({ name: '', description: '', logoUrl: '' });
+    setFormData({ name: '', description: '' });
+    setLogoFile(null);
+    setPreviewUrl(null);
   };
 
   const getProductCount = (brandName) => {
@@ -114,9 +130,9 @@ const BrandManagement = () => {
                 <div className="flex-1">
                   <div className="flex items-center mb-3">
                     <div className="p-2 bg-purple-100 rounded-lg mr-3">
-                      {brand.logoUrl ? (
+                      {brand.image_url ? (
                         <img
-                          src={brand.logoUrl}
+                          src={brand.image_url}
                           alt={brand.name}
                           className="h-8 w-8 object-contain"
                           onError={(e) => {
@@ -201,7 +217,7 @@ const BrandManagement = () => {
                   />
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description
                   </label>
@@ -212,42 +228,33 @@ const BrandManagement = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter brand description"
                   />
-                </div>
+                </div> */}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Brand Logo URL
+                    Brand Logo *
                   </label>
-                  <div className="flex space-x-2">
-                    <input
-                      type="url"
-                      value={formData.logoUrl}
-                      onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="https://example.com/logo.png"
-                    />
-                    <button
-                      type="button"
-                      className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                      title="Upload Logo"
-                    >
-                      <Upload className="h-5 w-5 text-gray-600" />
-                    </button>
-                  </div>
-                  {formData.logoUrl && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                     required={!editingBrand}   
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setLogoFile(file);
+                        setPreviewUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+
+                  {(previewUrl || formData.logoUrl) && (
                     <div className="mt-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                       <img
-                        src={formData.logoUrl}
+                        src={previewUrl || formData.logoUrl}
                         alt="Brand logo preview"
                         className="h-16 object-contain"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'block';
-                        }}
                       />
-                      <div className="text-red-500 text-sm hidden">
-                        Failed to load logo image
-                      </div>
                     </div>
                   )}
                 </div>

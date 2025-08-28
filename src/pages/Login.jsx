@@ -25,7 +25,7 @@ const Login = () => {
     setLoading(true);
 
     const result = login(credentials);
-    
+    console.log(result);
     if (result.success) {
       const redirectPath = result.user.role === 'admin' ? '/admin' : 
                           result.user.role === 'manager' ? '/manager' : '/pos';
@@ -122,8 +122,8 @@ const Login = () => {
               )}
             </button>
           </form>
-
-          <div className="mt-8 border-t pt-6">
+              
+          {/* <div className="mt-8 border-t pt-6 d-none">
             <p className="text-sm text-gray-600 mb-4 text-center">Demo Credentials:</p>
             <div className="space-y-2">
               {demoCredentials.map((cred, index) => (
@@ -144,7 +144,7 @@ const Login = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

@@ -47,6 +47,12 @@ const BranchManagement = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+     if (!/^\d{10}$/.test(formData.phone)) {
+    alert("Phone number must be exactly 10 digits.");
+    return;
+  }
+
+
     if (editingBranch) {
       updateBranch(editingBranch.id, formData);
     } else {
@@ -141,75 +147,7 @@ const BranchManagement = () => {
         </div>
 
         {/* Branches Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredBranches.map((branch) => (
-            <div key={branch.id} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-all group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="p-3 bg-purple-100 rounded-lg mr-4">
-                    <Building className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{branch.name}</h3>
-                    <p className="text-sm text-gray-500">Branch ID: #{branch.id}</p>
-                  </div>
-                </div>
-                <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleEdit(branch)}
-                    className="text-purple-600 hover:text-purple-800 p-2 rounded-lg hover:bg-purple-50 transition-colors"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(branch.id)}
-                    className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                  <span className="text-sm">{branch.address}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                  <span className="text-sm">{branch.phone}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                  <span className="text-sm">{branch.email}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <User className="h-4 w-4 mr-2 text-gray-400" />
-                  <span className="text-sm">{branch.manager || 'No manager assigned'}</span>
-                </div>
-              </div>
-
-              {!branch.manager && (
-                <button
-                  onClick={() => handleAddManager(branch)}
-                  className="w-full mt-4 flex items-center justify-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-colors"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  Add Manager
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {filteredBranches.length === 0 && (
-          <div className="text-center py-12">
-            <Building className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500 text-lg">No branches found</p>
-            <p className="text-gray-400 text-sm">Create your first branch to get started</p>
-          </div>
-        )}
-
+       
         {/* Add/Edit Branch Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -259,14 +197,22 @@ const BranchManagement = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Phone Number *
                   </label>
+                 
                   <input
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // allow only numbers and limit to 10 digits
+                      if (/^\d{0,10}$/.test(value)) {
+                        setFormData({ ...formData, phone: value });
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Enter phone number"
+                    placeholder="Enter 10-digit phone number"
                     required
                   />
+
                 </div>
 
                 <div>
