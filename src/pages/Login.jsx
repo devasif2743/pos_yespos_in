@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext';
 import { Store, User, Lock, Eye, EyeOff } from 'lucide-react';
-
+import {loginWeb} from '../contexts/authApi';
 const Login = () => {
-  const { user, login } = useAuth();
+  // const { user, login } = useAuth();
   const location = useLocation();
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
@@ -12,36 +12,77 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const from = location.state?.from?.pathname || '/';
+  const storedUser = JSON.parse(localStorage.getItem("user_details") || "null");
+if (storedUser) {
+  const redirectPath =
+    storedUser.role === 'admin' ? '/admin' :
+    storedUser.role === 'manager' ? '/manager' : '/pos';
 
-  if (user) {
-    const redirectPath = user.role === 'admin' ? '/admin' : 
-                        user.role === 'manager' ? '/manager' : '/pos';
-    return <Navigate to={from === '/' ? redirectPath : from} replace />;
-  }
+  return <Navigate to={from === '/' ? redirectPath : from} replace />;
+}
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+//  const handleSubmit = async (e) => {
+//   e.preventDefault();
+//   setError('');
+//   setLoading(true);
 
-    const result = login(credentials);
-    console.log(result);
-    if (result.success) {
-      const redirectPath = result.user.role === 'admin' ? '/admin' : 
-                          result.user.role === 'manager' ? '/manager' : '/pos';
+//   try {
+//     const result = await login(credentials);  // <-- await here
+
+//     if (result.success) {
+//       const redirectPath =
+//         result.user.role === 'admin' ? '/admin' :
+//         result.user.role === 'manager' ? '/manager' : '/pos';
+
+//       // Instead of full reload, better to use Navigate or useNavigate()
+//       window.location.href = from === '/' ? redirectPath : from;
+//     } else {
+//       setError(result.error || "Invalid credentials");
+//     }
+//   } catch (err) {
+//     console.error("Login failed:", err);
+//     setError("Something went wrong. Please try again.");
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
+
+  try {
+    const res = await loginWeb(credentials);
+    console.log("dfkdsjf",res);
+    if (res.data.status) {
+      // save token + user details
+      localStorage.setItem("access_token", res.data.access_token);
+      localStorage.setItem("user_details", JSON.stringify(res.data.user));
+
+      const redirectPath =
+        res.data.role === 'admin' ? '/admin' :
+        res.data.role === 'manager' ? '/manager' : '/pos';
+
+      // redirect
       window.location.href = from === '/' ? redirectPath : from;
     } else {
-      setError(result.error);
+      setError(res.message || "Invalid credentials");
     }
-    
+  } catch (err) {
+    console.error("Login error:", err);
+    setError(err.response?.data?.message || "Something went wrong");
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
-  const demoCredentials = [
-    { username: 'admin', password: 'admin123', role: 'Admin' },
-    { username: 'manager1', password: 'manager123', role: 'Branch Manager' },
-    { username: 'pos1', password: 'pos123', role: 'POS User' }
-  ];
+
+  // const demoCredentials = [
+  //   { username: 'admin', password: 'admin123', role: 'Admin' },
+  //   { username: 'manager1', password: 'manager123', role: 'Branch Manager' },
+  //   { username: 'pos1', password: 'pos123', role: 'POS User' }
+  // ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-teal-500 flex items-center justify-center p-4">

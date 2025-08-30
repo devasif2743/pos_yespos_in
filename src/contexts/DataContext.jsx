@@ -1,23 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState } from "react";
 import api from "./authApi";
 
 const DataContext = createContext();
 
 export const useData = () => {
-  const context = useContext(DataContext);
-  if (!context) throw new Error("useData must be used within a DataProvider");
-  return context;
+  const ctx = useContext(DataContext);
+  if (!ctx) throw new Error("useData must be used within a DataProvider");
+  return ctx;
 };
 
 export const DataProvider = ({ children }) => {
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [branches, setBranches] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [products, setProducts] = useState([]);
   const [combos, setCombos] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const didInit = useRef(false);
 
   // ================= BRANDS =================
   const fetchBrands = async () => {
@@ -61,14 +58,23 @@ export const DataProvider = ({ children }) => {
   };
 
   // ================= CATEGORIES =================
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get("/admin/list-category");
-      if (res.data.status) setCategories(res.data.data);
-    } catch (err) {
-      console.error("Error fetching categories:", err.response?.data || err);
+const fetchCategories = async () => {
+  try {
+    const res = await api.get("/admin/list-category");
+    if (res.data.status) {
+      const normalized = res.data.data.map(c => ({
+        id: c.id,
+        name: c.name || c.category_name || "",   // normalize to .name
+        description: c.description || "",        // always a string
+        ...c,
+      }));
+      setCategories(normalized);
     }
-  };
+  } catch (err) {
+    console.error("Error fetching categories:", err.response?.data || err);
+  }
+};
+
 
   const addCategory = async (data) => {
     try {
@@ -78,17 +84,17 @@ export const DataProvider = ({ children }) => {
       console.error("Error adding category:", err.response?.data || err);
     }
   };
-
-  const updateCategory = async (id, data) => {
-    try {
-      const res = await api.post(`/admin/update-category/${id}`, data);
-      if (res.data.status) {
-        setCategories((prev) => prev.map((c) => (c.id === id ? res.data.data : c)));
-      }
-    } catch (err) {
-      console.error("Error updating category:", err.response?.data || err);
+const updateCategory = async (id, data) => {
+  try {
+    const res = await api.post(`/admin/update-category/${id}`, data);
+    if (res.data.status) {
+      setCategories((prev) => prev.map((c) => (c.id === id ? res.data.data : c)));
     }
-  };
+  } catch (err) {
+    console.error("Error updating category:", err.response?.data || err);
+  }
+};
+
 
   const deleteCategory = async (id) => {
     try {
@@ -242,64 +248,17 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // ================= INIT FETCH =================
-useEffect(() => {
-  let isMounted = true;
-  (async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchBrands(),
-        fetchCategories(),
-        fetchBranches(),
-        fetchProducts(),
-        fetchCombos(),
-      ]);
-    } finally {
-      if (isMounted) setLoading(false);
-    }
-  })();
-  return () => {
-    isMounted = false;
-  };
-}, []); // empty dependency => only runs once
-
-
-
+  // ================= PROVIDER =================
   return (
     <DataContext.Provider
       value={{
-        categories,
-        products,
-        branches,
-        brands,
-        combos,
-        loading,
+        brands, categories, branches, products, combos,
 
-        fetchBrands,
-        addBrand,
-        updateBrand,
-        deleteBrand,
-
-        fetchCategories,
-        addCategory,
-        updateCategory,
-        deleteCategory,
-
-        fetchBranches,
-        addBranch,
-        updateBranch,
-        deleteBranch,
-
-        fetchProducts,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-
-        fetchCombos,
-        addCombo,
-        updateCombo,
-        deleteCombo,
+        fetchBrands, addBrand, updateBrand, deleteBrand,
+        fetchCategories, addCategory, updateCategory, deleteCategory,
+        fetchBranches, addBranch, updateBranch, deleteBranch,
+        fetchProducts, addProduct, updateProduct, deleteProduct,
+        fetchCombos, addCombo, updateCombo, deleteCombo,
       }}
     >
       {children}

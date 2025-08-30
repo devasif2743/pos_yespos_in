@@ -52,6 +52,84 @@ export const loginWeb= async (payload)=>{
      return response;
 }
 
+
+export const fetchProducts = async () => {
+  const res = await api.get("/admin/list-product");
+  return res.data; // { status, data }
+};
+
+export const addProduct = async (formData) => {
+  const res = await api.post("/admin/add-product", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};
+
+export const updateProduct = async (id, formData) => {
+  const res = await api.post(`/admin/update-product/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};
+
+export const deleteProduct = async (id) => {
+  const res = await api.delete(`/admin/delete-product/${id}`);
+  return res.data;
+};
+
+// Brand Section
+export const fetchBrands = async () => {
+  const res = await api.get("/admin/list-brand");
+  return res.data;
+};
+
+
+// Categories
+export const fetchCategories = async () => {
+  const res = await api.get("/admin/list-category");
+  return res.data;
+};
+
+export const addCategory = async (payload) => {
+  const res = await api.post("/admin/add-category", payload);
+  return res.data;
+};
+
+export const updateCategory = async (id, payload) => {
+  const res = await api.post(`/admin/update-category/${id}`, payload);
+  return res.data;
+};
+
+export const deleteCategory = async (id) => {
+  const res = await api.delete(`/admin/delete-category/${id}`);
+  return res.data;
+};
+
+
+// branch api
+export const fetchBranches = async () => {
+  const res = await api.get("/admin/list-branch");
+  return res.data;
+};
+
+export const addBranch = async (payload) => {
+  const res = await api.post("/admin/add-branch", payload);
+  return res.data;
+};
+
+export const updateBranch = async (id, payload) => {
+  const res = await api.post(`/admin/update-branch/${id}`, payload);
+  return res.data;
+};
+
+export const deleteBranch = async (id) => {
+  const res = await api.delete(`/admin/delete-branch/${id}`);
+  return res.data;
+};
+
+
+
+
 export const addbrand= async (payload)=>{
      const response= await api.post('admin/add-brand',payload);
      return response;
